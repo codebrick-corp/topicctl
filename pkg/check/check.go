@@ -64,22 +64,22 @@ func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, err
 	}
 
 	// Check existence
-	results.AppendResult(
-		TopicCheckResult{
-			Name: CheckNameTopicExists,
-		},
-	)
+	// results.AppendResult(
+	// 	TopicCheckResult{
+	// 		Name: CheckNameTopicExists,
+	// 	},
+	// )
 
-	topicInfo, err := config.AdminClient.GetTopic(ctx, config.TopicConfig.Meta.Name, true)
-	if err != nil {
-		// Don't bother with remaining checks if we can't get the topic
-		if err == admin.ErrTopicDoesNotExist {
-			results.UpdateLastResult(false, "")
-			return results, nil
-		}
-		return results, err
-	}
-	results.UpdateLastResult(true, "")
+	topicInfo, _ := config.AdminClient.GetTopic(ctx, config.TopicConfig.Meta.Name, true)
+	// if err != nil {
+	// Don't bother with remaining checks if we can't get the topic
+	// if err == admin.ErrTopicDoesNotExist {
+	// results.UpdateLastResult(false, "")
+	// return results, nil
+	// }
+	// return results, err
+	// }
+	// results.UpdateLastResult(true, "")
 
 	// Check retention
 	results.AppendResult(
