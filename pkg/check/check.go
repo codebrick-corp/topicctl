@@ -24,6 +24,10 @@ type CheckConfig struct {
 // (e.g., cluster zk isn't reachable), then an error is returned.
 func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, error) {
 	results := TopicCheckResults{}
+	brokers, err := config.AdminClient.GetBrokers(ctx, nil)
+	if err != nil {
+		return results, err
+	}
 
 	// Check config
 	results.AppendResult(
@@ -129,17 +133,16 @@ func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, err
 			Name: CheckNameReplicationFactorCorrect,
 		},
 	)
-	replicationFactor := topicInfo.MaxISR()
 
-	if replicationFactor == config.TopicConfig.Spec.ReplicationFactor {
+	if config.TopicConfig.Spec.ReplicationFactor%len(brokers) == 0 {
 		results.UpdateLastResult(true, "")
 	} else {
 		results.UpdateLastResult(
 			false,
 			fmt.Sprintf(
-				"expected %d, observed %d",
+				"len(ReplicationFactor) %d must be a multiple of len(broker) %d",
 				config.TopicConfig.Spec.ReplicationFactor,
-				replicationFactor,
+				len(brokers),
 			),
 		)
 	}
@@ -150,15 +153,15 @@ func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, err
 			Name: CheckNamePartitionCountCorrect,
 		},
 	)
-	if len(topicInfo.Partitions) == config.TopicConfig.Spec.Partitions {
+	if config.TopicConfig.Spec.Partitions%len(brokers) == 0 {
 		results.UpdateLastResult(true, "")
 	} else {
 		results.UpdateLastResult(
 			false,
 			fmt.Sprintf(
-				"expected %d, observed %d",
+				"len(Partitions) %d must be a multiple of len(broker) %d",
 				config.TopicConfig.Spec.Partitions,
-				len(topicInfo.Partitions),
+				len(brokers),
 			),
 		)
 	}
