@@ -153,7 +153,7 @@ func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, err
 			Name: CheckNamePartitionCountCorrect,
 		},
 	)
-	if config.TopicConfig.Spec.Partitions%len(brokers) == 0 {
+	if config.TopicConfig.Spec.Partitions%len(brokers) == 0 || config.TopicConfig.Spec.Partitions == 1 {
 		results.UpdateLastResult(true, "")
 	} else {
 		results.UpdateLastResult(
