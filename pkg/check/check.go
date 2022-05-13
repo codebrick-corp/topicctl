@@ -73,60 +73,65 @@ func CheckTopic(ctx context.Context, config CheckConfig) (TopicCheckResults, err
 	// 		Name: CheckNameTopicExists,
 	// 	},
 	// )
-
-	topicInfo, _ := config.AdminClient.GetTopic(ctx, config.TopicConfig.Meta.Name, true)
-	// if err != nil {
+    topicDoesNotExist := false
+	topicInfo, err := config.AdminClient.GetTopic(ctx, config.TopicConfig.Meta.Name, true)
+	if err != nil {
 	// Don't bother with remaining checks if we can't get the topic
-	// if err == admin.ErrTopicDoesNotExist {
+		if err == admin.ErrTopicDoesNotExist {
+			topicDoesNotExist = true
+		}
 	// results.UpdateLastResult(false, "")
 	// return results, nil
-	// }
+	}
+
 	// return results, err
 	// }
 	// results.UpdateLastResult(true, "")
 
-	// Check retention
-	results.AppendResult(
-		TopicCheckResult{
-			Name: CheckNameConfigSettingsCorrect,
-		},
-	)
-
-	settings := config.TopicConfig.Spec.Settings.Copy()
-	if config.TopicConfig.Spec.RetentionMinutes > 0 {
-		settings[admin.RetentionKey] = config.TopicConfig.Spec.RetentionMinutes * 60000
-	}
-
-	diffKeys, missingKeys, err := settings.ConfigMapDiffs(topicInfo.Config)
-	if err != nil {
-		return results, err
-	}
-
-	if len(diffKeys) == 0 && len(missingKeys) == 0 {
-		results.UpdateLastResult(true, "")
-	} else {
-		combinedKeys := []string{}
-		for _, diffKey := range diffKeys {
-			combinedKeys = append(combinedKeys, diffKey)
-		}
-		for _, missingKey := range missingKeys {
-			combinedKeys = append(combinedKeys, missingKey)
-		}
-
-		sort.Slice(combinedKeys, func(a, b int) bool {
-			return combinedKeys[a] < combinedKeys[b]
-		})
-
-		results.UpdateLastResult(
-			false,
-			fmt.Sprintf(
-				"%d keys have different values between cluster and topic config: %v",
-				len(combinedKeys),
-				combinedKeys,
-			),
+	// skip CheckNameConfigSettingsCorrect if topic does not exist
+	if !topicDoesNotExist {
+		// Check retention
+		results.AppendResult(
+			TopicCheckResult{
+				Name: CheckNameConfigSettingsCorrect,
+			},
 		)
-	}
 
+		settings := config.TopicConfig.Spec.Settings.Copy()
+		if config.TopicConfig.Spec.RetentionMinutes > 0 {
+			settings[admin.RetentionKey] = config.TopicConfig.Spec.RetentionMinutes * 60000
+		}
+
+		diffKeys, missingKeys, err := settings.ConfigMapDiffs(topicInfo.Config)
+		if err != nil {
+			return results, err
+		}
+
+		if len(diffKeys) == 0 && len(missingKeys) == 0 {
+			results.UpdateLastResult(true, "")
+		} else {
+			combinedKeys := []string{}
+			for _, diffKey := range diffKeys {
+				combinedKeys = append(combinedKeys, diffKey)
+			}
+			for _, missingKey := range missingKeys {
+				combinedKeys = append(combinedKeys, missingKey)
+			}
+
+			sort.Slice(combinedKeys, func(a, b int) bool {
+				return combinedKeys[a] < combinedKeys[b]
+			})
+
+			results.UpdateLastResult(
+				false,
+				fmt.Sprintf(
+					"%d keys have different values between cluster and topic config: %v",
+					len(combinedKeys),
+					combinedKeys,
+				),
+			)
+		}
+	}
 	// Check replication factor
 	results.AppendResult(
 		TopicCheckResult{
